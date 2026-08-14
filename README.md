@@ -1,4 +1,3 @@
-
 <div align="center">
 <img src="https://i.ibb.co/gZhFNqLP/x.jpg" alt="Bot Logo">
 <h1>Telegram Proxy & Data Routing Bot</h1>
@@ -33,41 +32,3 @@ This script acts as a middleman between authorized users and a hidden backend ta
 ### 1. Requirements
 ```bash
 pip install pyrogram tgcrypto flask python-dotenv
-
-2. Environment Variables (.env)
-The system relies entirely on environment variables for configuration. Create a .env file in the root directory:
-PORT=8080
-API_ID=1234567
-API_HASH="your_api_hash"
-SESSION_STRING="your_pyrogram_string_session"
-BOT_NAME="ProxyBot"
-TARGET_BOT="Target_Bot_Username"
-OWNER_ID=123456789
-ADMIN_ID=987654321
-
-3. Execution
-python main.py
-
-📚 System Commands
-Access Control
-| Command | Logic |
-|---|---|
-| /auth [User_ID] | Appends the specified User ID to the AUTHORIZED_USERS list. Only executable by Owner/Admin. |
-| /ping | Simple latency and uptime check. |
-Data Queries
-All commands below follow the same routing logic to the TARGET_BOT.
-| Command | Expected Input |
-|---|---|
-| /num | Mobile Number |
-| /vehicle | Vehicle Plate Number |
-| /aadhar | UID/Aadhaar Number |
-| /familyinfo | UID/Aadhaar Number |
-| /vnum | Vehicle Plate Number |
-| /tgnum | Telegram User ID |
-| /fam / /sms | Target Identifiers |
-
-
-👨‍💻 Developer & Community
- * Developer: @Smugllers
- * Telegram Group: @MAGMAxRICH
- * GitHub: themagmalord333-oss
