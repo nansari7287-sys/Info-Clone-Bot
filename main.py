@@ -52,7 +52,7 @@ AUTHORIZED_USERS = [OWNER_ID, ADMIN_ID]
 app = Client("vip_blue_hat", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
 # --- TEST COMMAND (BOT CHECK KARNE KE LIYE) ---
-@app.on_message(filters.command("ping", prefixes=["/", ".", "!"]) & filters.private)
+@app.on_message(filters.command("ping", prefixes=["/", ".", "!"]))
 async def ping_cmd(client, message):
     await message.reply_text("🏓 **Pong! Bot zinda hai aur response de raha hai!**")
 
@@ -75,29 +75,47 @@ async def authorize_user(client, message):
     except ValueError:
         await message.reply_text("❌ **Invalid User ID!** Sirf numbers daalein.")
 
-# --- DASHBOARD / START ---
-@app.on_message(filters.command(["start", "help", "menu"], prefixes=["/", ".", "!"]) & filters.private)
+# --- DASHBOARD / START (Group aur Private dono me kaam karega) ---
+@app.on_message(filters.command(["start", "help", "menu"], prefixes=["/", ".", "!"]))
 async def start_cmd(client, message):
-    if message.from_user.id not in AUTHORIZED_USERS:
+    if message.chat.type == "private" and message.from_user.id not in AUTHORIZED_USERS:
         return await message.reply_text("🚫 **Access Denied.**\nIse use karne ke liye Admin ya Owner se permission lein.")
 
     text = (
         f"🛡️ **Welcome to {BOT_NAME.upper()}**\n\n"
         "**Available Commands:**\n"
+        "🔍 **DATABASE LOOKUP**\n"
         "📱 `/num [number]` → Number Details\n"
         "🚗 `/vehicle [Plate]` → Challan And Rc\n"
         "🆔 `/aadhar [UID]` → Aadhaar Info\n"
         "👨‍👩‍👧 `/familyinfo [aadhar]` → Family Tree\n"
+        "🌤️ `/weather [City]` → 3-Day Forecast\n"
         "🔗 `/vnum [Plate]` → Linked Mobile\n"
-        "📞 `/tgnum [TG ID]` → User's Mobile\n\n"
-        f"⚡ **Powered by {BOT_NAME.upper()}**"
+        "📸 `/insta [Username]` → Instagram Intel\n"
+        "📞 `/paknum [Number]` → PK Number Info\n"
+        "📍 `/pincode [Code]` → Area Details\n"
+        "🆔 `/pan [PAN No]` → Name & Info\n"
+        "📲 `/tgnum [TG ID]` → User's Mobile\n"
+        "🏦 `/ifsc [IFSC]` → Bank Branch\n"
+        "👤 `/myid` → Check your User ID\n\n"
+        f"⚡ **Powered by @frexxxy**"
     )
     await message.reply_text(text)
 
-# --- MAIN LOOKUP LOGIC ---
-@app.on_message(filters.command(["num", "vehicle", "aadhar", "familyinfo", "vnum", "tgnum", "fam", "sms"], prefixes=["/", ".", "!"]) & filters.private)
+# --- USER ID CHECK COMMAND ---
+@app.on_message(filters.command("myid", prefixes=["/", ".", "!"]))
+async def check_my_id(client, message):
+    await message.reply_text(f"👤 **Your Telegram ID:** `{message.from_user.id}`")
+
+# --- MAIN LOOKUP LOGIC (Sabhi commands ke liye) ---
+# Yahan saari commands add kar di gayi hain
+@app.on_message(filters.command([
+    "num", "vehicle", "aadhar", "familyinfo", "vnum", "tgnum", "fam", "sms",
+    "weather", "insta", "paknum", "pincode", "pan", "ifsc"
+], prefixes=["/", ".", "!"]))
 async def process_lookup(client, message):
-    if message.from_user.id not in AUTHORIZED_USERS:
+    # Group users ko permission check se bahar rakho, bas private valo ko rokho
+    if message.chat.type == "private" and message.from_user.id not in AUTHORIZED_USERS:
         return await message.reply_text("🚫 **Access Denied.**\nAapko command use karne ki permission nahi hai.")
 
     if len(message.command) < 2:
@@ -118,11 +136,9 @@ async def process_lookup(client, message):
             async for log in client.get_chat_history(TARGET_BOT, limit=3):
                 if log.id > sent_req.id:
                     text_content = (log.text or log.caption or "").lower()
-
                     ignore_words = ["wait", "searching", "processing", "loading", "fetching", "scanning"]
                     if any(word in text_content for word in ignore_words) and not log.document:
                         continue 
-
                     target_response = log
                     break
             if target_response: break
@@ -146,28 +162,28 @@ async def process_lookup(client, message):
         clean_output = re.sub(r"⚡ Designed.*|@\w+", "", raw_text).strip()
 
         if "{" in clean_output:
-            final_msg = f"```json\n{clean_output}\n```\n\n⚡ **{BOT_NAME.upper()}**"
+            final_msg = f"```json\n{clean_output}\n```\n\n⚡ **Powered by @frexxxy**"
         else:
-            final_msg = f"**Result:**\n`{clean_output}`\n\n⚡ **{BOT_NAME.upper()}**"
+            final_msg = f"**Result:**\n`{clean_output}`\n\n⚡ **Powered by @frexxxy**"
 
         await status.delete()
 
+        sent_message = None
         if len(final_msg) > 4000:
-            sent_msgs = []
             for i in range(0, len(final_msg), 4000):
-                msg = await message.reply_text(final_msg[i:i+4000])
-                sent_msgs.append(msg)
+                sent_message = await message.reply_text(final_msg[i:i+4000])
                 await asyncio.sleep(1)
-
-            await asyncio.sleep(60)
-            for m in sent_msgs:
-                try: await m.delete()
-                except: pass
         else:
-            sent = await message.reply_text(final_msg)
-            await asyncio.sleep(60)
-            try: await sent.delete()
-            except: pass
+            sent_message = await message.reply_text(final_msg)
+
+        # ⏳ 30 Seconds baad result delete ho jayega
+        if sent_message:
+            await asyncio.sleep(30)
+            try:
+                await sent_message.delete()
+                await message.reply_text("🧹 **Result auto-deleted after 30 seconds for privacy.**")
+            except:
+                pass
 
     except Exception as e:
         try:
