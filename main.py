@@ -16,15 +16,6 @@ from pyrogram import Client, filters, idle
 load_dotenv()
 
 # ==========================================
-# 🛑 EVENT LOOP FIX FOR PYDROID / TERMUX / RENDER
-# ==========================================
-try:
-    loop = asyncio.get_running_loop()
-except RuntimeError:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-# ==========================================
 # ⚙️ SYSTEM CONFIGURATIONS
 # ==========================================
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +45,8 @@ def home():
     return f"🤖 {SYSTEM_NAME} VIP Engine is Running Seamlessly on Render!"
 
 def run_server():
+    # 🔥 FIX FOR RENDER: Thread ke andar naya event loop set karna zaroori hai
+    asyncio.set_event_loop(asyncio.new_event_loop())
     port = int(os.environ.get("PORT", 8080))
     web_app.run(host="0.0.0.0", port=port)
 
@@ -249,15 +242,11 @@ async def process_lookup(client, message):
 # ==========================================
 # 🔥 MAIN EXECUTION PROCESS
 # ==========================================
-async def main():
+if __name__ == "__main__":
+    # 1. Start Web Server in a background thread
     Thread(target=run_server, daemon=True).start()
     
+    # 2. Start Pyrogram Engine (Handles its own async loop securely)
     print("⏳ Initializing VIP Session Engine...")
-    await app.start()
-    print("✅ SYSTEM IS ONLINE AND SECURE!")
     print(f"✅ Bridge Connected to {TARGET_BOT}")
-    
-    await idle()
-
-if __name__ == "__main__":
-    loop.run_until_complete(main())
+    app.run()
