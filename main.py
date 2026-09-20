@@ -123,6 +123,33 @@ async def run_loading_animation(message):
     return anim_msg
 
 # ==========================================
+# 🧹 BACKGROUND AUTO-DELETE ROUTINE
+# ==========================================
+async def auto_delete_task(cmd_msg, bot_msgs):
+    # Phase 1: Wait 30 seconds, then delete the bot's result
+    await asyncio.sleep(30)
+    for m in bot_msgs:
+        try:
+            await m.delete()
+        except:
+            pass
+            
+    # Send a small cleanup notification
+    try:
+        cleanup_msg = await cmd_msg.reply_text(f"🧹 **Data deleted for privacy.** Command will be removed shortly.\n\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}")
+    except:
+        cleanup_msg = None
+
+    # Phase 2: Wait another 30 seconds (Total 60s), then delete user command & cleanup msg
+    await asyncio.sleep(30)
+    try:
+        await cmd_msg.delete()
+        if cleanup_msg:
+            await cleanup_msg.delete()
+    except:
+        pass
+
+# ==========================================
 # 🎮 BASIC COMMAND HANDLERS
 # ==========================================
 @app.on_message(filters.command("ping", prefixes=["/", ".", "!"]))
@@ -132,10 +159,12 @@ async def cmd_ping(client, message):
     msg = await message.reply_text(f"⚡ **SYSTEM STATUS**\n━━━━━━━━━━━━\n🕒 Uptime: `{uptime}`\n✅ Status: `Online & Active`\n🛡️ Protection: `Enabled`")
     await asyncio.sleep(15)
     await msg.delete()
+    await message.delete()
 
 @app.on_message(filters.command("myid", prefixes=["/", ".", "!"]))
 async def cmd_myid(client, message):
-    await message.reply_text(f"👤 **Aapki Telegram ID:** `{message.from_user.id}`\n\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}")
+    msg = await message.reply_text(f"👤 **Aapki Telegram ID:** `{message.from_user.id}`\n\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}")
+    asyncio.create_task(auto_delete_task(message, [msg]))
 
 @app.on_message(filters.command("auth", prefixes=["/", ".", "!"]) & filters.private)
 async def cmd_auth(client, message):
@@ -174,13 +203,15 @@ async def process_lookup(client, message):
         return await message.reply_text(f"🛑 **ACCESS DENIED** 🛑\n\nAapke paas is command ka access nahi hai.\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}")
 
     if len(message.command) < 2:
-        return await message.reply_text(f"❌ **Data missing!**\nSahi format: `/{message.command[0]} [value]`")
+        msg = await message.reply_text(f"❌ **Data missing!**\nSahi format: `/{message.command[0]} [value]`")
+        return asyncio.create_task(auto_delete_task(message, [msg]))
 
     try:
         try:
             sent_req = await client.send_message(TARGET_BOT, message.text)
         except Exception as e:
-            return await message.reply_text(f"❌ **Database Connection Error:** Ensure you have started {TARGET_BOT}.\nError: {e}")
+            msg = await message.reply_text(f"❌ **Database Connection Error:** Ensure you have started {TARGET_BOT}.\nError: {e}")
+            return asyncio.create_task(auto_delete_task(message, [msg]))
 
         anim_msg = await run_loading_animation(message)
 
@@ -201,7 +232,8 @@ async def process_lookup(client, message):
                 break
 
         if not target_response:
-            return await anim_msg.edit_text("❌ **Timeout:** Database server is taking too long. Please try again.")
+            await anim_msg.edit_text("❌ **Timeout:** Database server is taking too long. Please try again.")
+            return asyncio.create_task(auto_delete_task(message, [anim_msg]))
 
         raw_text = ""
         
@@ -215,7 +247,8 @@ async def process_lookup(client, message):
             raw_text = target_response.text or target_response.caption or ""
 
         if not raw_text or len(raw_text.strip()) < 2:
-            return await anim_msg.edit_text("❌ **No Records Found in Database.**")
+            await anim_msg.edit_text("❌ **No Records Found in Database.**")
+            return asyncio.create_task(auto_delete_task(message, [anim_msg]))
 
         clean_output = re.sub(r"⚡ Designed.*|@\w+|powered by.*", "", raw_text, flags=re.IGNORECASE).strip()
 
@@ -227,25 +260,24 @@ async def process_lookup(client, message):
 
         await anim_msg.delete()
 
-        sent_message = None
+        # Handle message chunking and collect all sent messages
+        sent_messages = []
         if len(final_msg) > 4000:
             for i in range(0, len(final_msg), 4000):
-                sent_message = await message.reply_text(final_msg[i:i+4000])
+                msg = await message.reply_text(final_msg[i:i+4000])
+                sent_messages.append(msg)
                 await asyncio.sleep(1)
         else:
-            sent_message = await message.reply_text(final_msg)
+            msg = await message.reply_text(final_msg)
+            sent_messages.append(msg)
 
-        if sent_message:
-            await asyncio.sleep(30)
-            try:
-                await sent_message.delete()
-                await message.reply_text(f"🧹 **Data has been auto-deleted after 30 seconds for your privacy.**\n\n⚡ 𝐏𝐨𝐰𝐞𝐫 𝐁𝐲 : {SYSTEM_NAME}")
-            except:
-                pass
+        # Trigger background auto-delete (30s for result, 60s for command)
+        asyncio.create_task(auto_delete_task(message, sent_messages))
 
     except Exception as e:
         try:
-            await message.reply_text(f"❌ **System Error:** Connection disrupted.")
+            msg = await message.reply_text(f"❌ **System Error:** Connection disrupted.")
+            asyncio.create_task(auto_delete_task(message, [msg]))
         except:
             pass
 
