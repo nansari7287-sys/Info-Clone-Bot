@@ -1,154 +1,209 @@
 import os
+import asyncio
+import logging
+import json
+import re
+import time
+from datetime import datetime
+from threading import Thread
+from flask import Flask
 from dotenv import load_dotenv
 
-# Load environment variables first
+# Pyrogram imports (SESSION ID SYSTEM)
+from pyrogram import Client, filters, idle
+
+# Load Environment Variables
 load_dotenv()
 
-# --- 🛑 SABSE PEHLE EVENT LOOP BANAO (CRITICAL FIX) 🛑 ---
-import asyncio
+# ==========================================
+# 🛑 EVENT LOOP FIX FOR PYDROID / TERMUX / RENDER
+# ==========================================
 try:
     loop = asyncio.get_running_loop()
 except RuntimeError:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-# --- AB BAAKI SAB IMPORT KARO ---
-import logging
-import json
-import re
-from threading import Thread
-from flask import Flask
-from pyrogram import Client, filters, idle
-
-# --- LOGGING SETUP ---
+# ==========================================
+# ⚙️ SYSTEM CONFIGURATIONS
+# ==========================================
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("FrexxxyOSINT")
 
-# --- WEB SERVER (FOR RENDER/UPTIME) ---
+# 🔐 API & SESSION CREDENTIALS FETCHED FROM .env
+API_ID = int(os.getenv("API_ID", "0"))
+API_HASH = os.getenv("API_HASH", "")
+SESSION_STRING = os.getenv("SESSION_STRING", "")
+
+TARGET_BOT = os.getenv("TARGET_BOT", "@Randominsight_bot")
+SYSTEM_NAME = os.getenv("SYSTEM_NAME", "@frexxxy")
+
+# 👑 ADMIN & AUTHORIZATION
+OWNER_ID = int(os.getenv("OWNER_ID", "0"))
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+AUTHORIZED_USERS = [OWNER_ID, ADMIN_ID]
+START_TIME = time.time()
+
+# ==========================================
+# 🌐 FLASK WEB SERVER (For Render 24/7 Uptime)
+# ==========================================
 web_app = Flask(__name__)
+
 @web_app.route('/')
 def home():
-    bot_name = os.getenv("BOT_NAME", "VIP BLUE HAT NETWORK")
-    return f"🤖 {bot_name.upper()} is Running!"
+    return f"🤖 {SYSTEM_NAME} VIP Engine is Running Seamlessly on Render!"
 
-def run_web():
-    port = int(os.getenv("PORT", 8080))
+def run_server():
+    port = int(os.environ.get("PORT", 8080))
     web_app.run(host="0.0.0.0", port=port)
 
-# --- CONFIGURATION FROM ENV ---
-API_ID = int(os.getenv("API_ID"))
-API_HASH = os.getenv("API_HASH")
-SESSION_STRING = os.getenv("SESSION_STRING")
+# ==========================================
+# 🤖 PYROGRAM SESSION INITIALIZATION
+# ==========================================
+app = Client(
+    "vip_session_engine",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    session_string=SESSION_STRING
+)
 
-TARGET_BOT = os.getenv("TARGET_BOT")
-BOT_NAME = os.getenv("BOT_NAME")
+# ==========================================
+# 🎨 VIP MENU GENERATOR
+# ==========================================
+def get_vip_menu(user):
+    return (
+        f"✦ ━━━━━━━━━━━━━━━━━━━━ ✦\n"
+        f"👑 **𝐏𝐑𝐄𝐌𝐈𝐔𝐌 𝐕𝐈𝐏 𝐏𝐀𝐍𝐄𝐋** 👑\n"
+        f"✦ ━━━━━━━━━━━━━━━━━━━━ ✦\n"
+        f"👤 **𝐔𝐬𝐞𝐫:** `{user.first_name}` | 🆔 `{user.id}`\n\n"
+        f"🌐 **𝗜𝐍𝐅𝐎 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒**\n"
+        f"• 📱 `/num` ➾ Phone Details\n"
+        f"• 💳 `/aadhar` ➾ Aadhaar Details\n"
+        f"• 👨‍👩‍👧 `/familyinfo` ➾ Family Details\n"
+        f"• 🚙 `/vnum` ➾ Vehicle to Mobile\n"
+        f"• 🇵🇰 `/paknum` ➾ Pak Database\n"
+        f"• 📱 `/mpnum` ➾ MP State Num Details\n\n"
+        f"🏦 **𝐅𝐈𝐍𝐀𝐍𝐂𝐄 & 𝐆𝐎𝐕𝐓**\n"
+        f"• 💳 `/advpan` ➾ Advance PAN\n"
+        f"• 🏦 `/ifsc` ➾ Bank IFSC\n"
+        f"• 📄 `/gst` ➾ Business Data\n"
+        f"• 📍 `/pincode` ➾ Area Pincode\n"
+        f"• 🗳️ `/voter` ➾ Voter ID Details\n"
+        f"• 📋 `/ration` ➾ Ration Card\n\n"
+        f"🛢️ **𝐔𝐓𝐈𝐋𝐈𝐓𝐈𝐄𝐒 & 𝐒𝐎𝐂𝐈𝐀𝐋**\n"
+        f"• 📞 `/tgnum` ➾ Telegram User Info\n"
+        f"• 🛢️ `/lpg` ➾ LPG Consumer\n"
+        f"• 🛢️ `/bharatgas` ➾ Bharat Gas\n"
+        f"• ⛽ `/hpgas` ➾ HP Gas\n"
+        f"• 👤 `/myid` ➾ Check your User ID\n\n"
+        f"⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}\n"
+        f"✦ ━━━━━━━━━━━━━━━━━━━━ ✦"
+    )
 
-OWNER_ID = int(os.getenv("OWNER_ID"))
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
+# ==========================================
+# ⏳ HACKER LOADING ANIMATION
+# ==========================================
+async def run_loading_animation(message):
+    anim_msg = await message.reply_text("```ini\n▒▒▒▒▒▒▒▒▒▒ 0% [CONNECTING]\n```")
+    bars = [
+        "```ini\n███▒▒▒▒▒▒▒ 25% [CHECKING DB]\n```",
+        "```ini\n██████▒▒▒▒ 50% [GETTING INFO]\n```",
+        "```ini\n█████████▒ 80% [PROCESSING]\n```",
+        "```ini\n██████████ 100% [COMPLETED]\n```"
+    ]
+    for bar in bars:
+        await asyncio.sleep(0.6) 
+        try:
+            await anim_msg.edit_text(bar)
+        except:
+            pass
+    return anim_msg
 
-# List to store authorized user IDs
-AUTHORIZED_USERS = [OWNER_ID, ADMIN_ID]
-
-app = Client("vip_blue_hat", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
-
-# --- TEST COMMAND (BOT CHECK KARNE KE LIYE) ---
+# ==========================================
+# 🎮 BASIC COMMAND HANDLERS
+# ==========================================
 @app.on_message(filters.command("ping", prefixes=["/", ".", "!"]))
-async def ping_cmd(client, message):
-    await message.reply_text("🏓 **Pong! Bot zinda hai aur response de raha hai!**")
+async def cmd_ping(client, message):
+    if message.from_user.id not in AUTHORIZED_USERS: return
+    uptime = str(datetime.timedelta(seconds=int(time.time() - START_TIME)))
+    msg = await message.reply_text(f"⚡ **SYSTEM STATUS**\n━━━━━━━━━━━━\n🕒 Uptime: `{uptime}`\n✅ Status: `Online & Active`\n🛡️ Protection: `Enabled`")
+    await asyncio.sleep(15)
+    await msg.delete()
 
-# --- COMMAND: AUTHENTICATE USER ---
+@app.on_message(filters.command("myid", prefixes=["/", ".", "!"]))
+async def cmd_myid(client, message):
+    await message.reply_text(f"👤 **Aapki Telegram ID:** `{message.from_user.id}`\n\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}")
+
 @app.on_message(filters.command("auth", prefixes=["/", ".", "!"]) & filters.private)
-async def authorize_user(client, message):
+async def cmd_auth(client, message):
     if message.from_user.id not in [OWNER_ID, ADMIN_ID]:
-        return await message.reply_text("🚫 **Aap Owner ya Admin nahi hain!**")
-
+        return await message.reply_text("🚫 **Access Denied.**")
     if len(message.command) < 2:
-        return await message.reply_text("❌ **Format Galat Hai!**\nUse: `/auth [User_ID]`")
-
+        return await message.reply_text("❌ **Format:** `/auth [User_ID]`")
     try:
         user_id = int(message.command[1])
         if user_id not in AUTHORIZED_USERS:
             AUTHORIZED_USERS.append(user_id)
-            await message.reply_text(f"✅ User `{user_id}` ko successfully permission mil gayi hai.")
+            await message.reply_text(f"✅ User `{user_id}` ko VIP Database access mil gaya hai.")
         else:
-            await message.reply_text("ℹ️ Ye User pehle se authorized hai.")
+            await message.reply_text("ℹ️ User pehle se VIP list me hai.")
     except ValueError:
-        await message.reply_text("❌ **Invalid User ID!** Sirf numbers daalein.")
+        await message.reply_text("❌ **Invalid ID!**")
 
-# --- DASHBOARD / START (Group aur Private dono me kaam karega) ---
 @app.on_message(filters.command(["start", "help", "menu"], prefixes=["/", ".", "!"]))
-async def start_cmd(client, message):
-    if message.chat.type == "private" and message.from_user.id not in AUTHORIZED_USERS:
-        return await message.reply_text("🚫 **Access Denied.**\nIse use karne ke liye Admin ya Owner se permission lein.")
+async def cmd_start(client, message):
+    if message.chat.type.name == "PRIVATE" and message.from_user.id not in AUTHORIZED_USERS:
+        return await message.reply_text(f"🛑 **ACCESS DENIED** 🛑\n\nIs Premium panel ko use karne ke liye Owner se permission lijiye.\n\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}")
+    
+    vip_menu = get_vip_menu(message.from_user)
+    await message.reply_text(vip_menu, disable_web_page_preview=True)
 
-    text = (
-        f"🛡️ **Welcome to {BOT_NAME.upper()}**\n\n"
-        "**Available Commands:**\n"
-        "🔍 **DATABASE LOOKUP**\n"
-        "📱 `/num [number]` → Number Details\n"
-        "🚗 `/vehicle [Plate]` → Challan And Rc\n"
-        "🆔 `/aadhar [UID]` → Aadhaar Info\n"
-        "👨‍👩‍👧 `/familyinfo [aadhar]` → Family Tree\n"
-        "🌤️ `/weather [City]` → 3-Day Forecast\n"
-        "🔗 `/vnum [Plate]` → Linked Mobile\n"
-        "📸 `/insta [Username]` → Instagram Intel\n"
-        "📞 `/paknum [Number]` → PK Number Info\n"
-        "📍 `/pincode [Code]` → Area Details\n"
-        "🆔 `/pan [PAN No]` → Name & Info\n"
-        "📲 `/tgnum [TG ID]` → User's Mobile\n"
-        "🏦 `/ifsc [IFSC]` → Bank Branch\n"
-        "👤 `/myid` → Check your User ID\n\n"
-        f"⚡ **Powered by @frexxxy**"
-    )
-    await message.reply_text(text)
-
-# --- USER ID CHECK COMMAND ---
-@app.on_message(filters.command("myid", prefixes=["/", ".", "!"]))
-async def check_my_id(client, message):
-    await message.reply_text(f"👤 **Your Telegram ID:** `{message.from_user.id}`")
-
-# --- MAIN LOOKUP LOGIC (Sabhi commands ke liye) ---
-# Yahan saari commands add kar di gayi hain
+# ==========================================
+# 🚀 CORE OSINT ENGINE (TARGET BOT RELAY)
+# ==========================================
 @app.on_message(filters.command([
-    "num", "vehicle", "aadhar", "familyinfo", "vnum", "tgnum", "fam", "sms",
-    "weather", "insta", "paknum", "pincode", "pan", "ifsc"
+    "num", "aadhar", "familyinfo", "vnum", "paknum", "pincode", 
+    "advpan", "tgnum", "ifsc", "gst", "lpg", "bharatgas", 
+    "voter", "ration", "mpnum", "hpgas"
 ], prefixes=["/", ".", "!"]))
 async def process_lookup(client, message):
-    # Group users ko permission check se bahar rakho, bas private valo ko rokho
-    if message.chat.type == "private" and message.from_user.id not in AUTHORIZED_USERS:
-        return await message.reply_text("🚫 **Access Denied.**\nAapko command use karne ki permission nahi hai.")
+    if message.chat.type.name == "PRIVATE" and message.from_user.id not in AUTHORIZED_USERS:
+        return await message.reply_text(f"🛑 **ACCESS DENIED** 🛑\n\nAapke paas is command ka access nahi hai.\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}")
 
     if len(message.command) < 2:
-        return await message.reply_text(f"❌ **Data missing!**\nSahi format use karein: `/{message.command[0]} [value]`")
-
-    status = await message.reply_text("🔍 **Fetching Details... Please wait.**")
+        return await message.reply_text(f"❌ **Data missing!**\nSahi format: `/{message.command[0]} [value]`")
 
     try:
         try:
             sent_req = await client.send_message(TARGET_BOT, message.text)
         except Exception as e:
-            return await status.edit(f"❌ **Target Bot Error:** Pata lagao ki kya aapne target bot ko kabhi /start kiya hai ya nahi.\nError: {e}")
+            return await message.reply_text(f"❌ **Database Connection Error:** Ensure you have started {TARGET_BOT}.\nError: {e}")
+
+        anim_msg = await run_loading_animation(message)
 
         target_response = None
-
-        for _ in range(30): 
+        for _ in range(25): 
             await asyncio.sleep(2)
-            async for log in client.get_chat_history(TARGET_BOT, limit=3):
+            async for log in client.get_chat_history(TARGET_BOT, limit=5):
                 if log.id > sent_req.id:
                     text_content = (log.text or log.caption or "").lower()
                     ignore_words = ["wait", "searching", "processing", "loading", "fetching", "scanning"]
+                    
                     if any(word in text_content for word in ignore_words) and not log.document:
                         continue 
+                    
                     target_response = log
                     break
-            if target_response: break
+            if target_response: 
+                break
 
         if not target_response:
-            return await status.edit("❌ **Timeout:** Target bot ne time par result nahi diya. Phir se try karein.")
+            return await anim_msg.edit_text("❌ **Timeout:** Database server is taking too long. Please try again.")
 
         raw_text = ""
+        
         if target_response.document:
-            await status.edit("📂 **Downloading Result File...**")
+            await anim_msg.edit_text("```ini\n📂 [DOWNLOADING SECURE FILE]\n```")
             path = await client.download_media(target_response)
             with open(path, 'r', encoding='utf-8', errors='ignore') as f:
                 raw_text = f.read()
@@ -157,16 +212,17 @@ async def process_lookup(client, message):
             raw_text = target_response.text or target_response.caption or ""
 
         if not raw_text or len(raw_text.strip()) < 2:
-            return await status.edit("❌ **No Data Found or Invalid Data.**")
+            return await anim_msg.edit_text("❌ **No Records Found in Database.**")
 
-        clean_output = re.sub(r"⚡ Designed.*|@\w+", "", raw_text).strip()
+        clean_output = re.sub(r"⚡ Designed.*|@\w+|powered by.*", "", raw_text, flags=re.IGNORECASE).strip()
 
-        if "{" in clean_output:
-            final_msg = f"```json\n{clean_output}\n```\n\n⚡ **Powered by @frexxxy**"
+        command_used = message.command[0].upper()
+        if "{" in clean_output or ":" in clean_output:
+            final_msg = f"**🗂️ {command_used} INTELLIGENCE REPORT**\n```json\n{clean_output}\n```\n\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}"
         else:
-            final_msg = f"**Result:**\n`{clean_output}`\n\n⚡ **Powered by @frexxxy**"
+            final_msg = f"**🗂️ {command_used} INTELLIGENCE REPORT**\n`{clean_output}`\n\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}"
 
-        await status.delete()
+        await anim_msg.delete()
 
         sent_message = None
         if len(final_msg) > 4000:
@@ -176,26 +232,31 @@ async def process_lookup(client, message):
         else:
             sent_message = await message.reply_text(final_msg)
 
-        # ⏳ 30 Seconds baad result delete ho jayega
         if sent_message:
             await asyncio.sleep(30)
             try:
                 await sent_message.delete()
-                await message.reply_text("🧹 **Result auto-deleted after 30 seconds for privacy.**")
+                await message.reply_text(f"🧹 **Data has been auto-deleted after 30 seconds for your privacy.**\n\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}")
             except:
                 pass
 
     except Exception as e:
         try:
-            await status.edit(f"❌ **System Error:** {str(e)}")
+            await message.reply_text(f"❌ **System Error:** Connection disrupted.")
         except:
-            await message.reply_text(f"❌ **System Error:** {str(e)}")
+            pass
 
-# --- BOT START KARNE KA PROCESS ---
+# ==========================================
+# 🔥 MAIN EXECUTION PROCESS
+# ==========================================
 async def main():
-    Thread(target=run_web, daemon=True).start()
+    Thread(target=run_server, daemon=True).start()
+    
+    print("⏳ Initializing VIP Session Engine...")
     await app.start()
-    print(f"✅ {BOT_NAME.upper()} IS ONLINE AND READY")
+    print("✅ SYSTEM IS ONLINE AND SECURE!")
+    print(f"✅ Bridge Connected to {TARGET_BOT}")
+    
     await idle()
 
 if __name__ == "__main__":
