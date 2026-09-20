@@ -123,10 +123,10 @@ async def run_loading_animation(message):
     return anim_msg
 
 # ==========================================
-# 🧹 BACKGROUND AUTO-DELETE ROUTINE
+# 🧹 SILENT BACKGROUND AUTO-DELETE ROUTINE
 # ==========================================
 async def auto_delete_task(cmd_msg, bot_msgs):
-    # Phase 1: Wait 30 seconds, then delete the bot's result
+    # Phase 1: Wait 30 seconds, then delete the bot's result silently
     await asyncio.sleep(30)
     for m in bot_msgs:
         try:
@@ -134,18 +134,10 @@ async def auto_delete_task(cmd_msg, bot_msgs):
         except:
             pass
             
-    # Send a small cleanup notification
-    try:
-        cleanup_msg = await cmd_msg.reply_text(f"🧹 **Data deleted for privacy.** Command will be removed shortly.\n\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}")
-    except:
-        cleanup_msg = None
-
-    # Phase 2: Wait another 30 seconds (Total 60s), then delete user command & cleanup msg
+    # Phase 2: Wait another 30 seconds (Total 60s), then delete user command silently
     await asyncio.sleep(30)
     try:
         await cmd_msg.delete()
-        if cleanup_msg:
-            await cleanup_msg.delete()
     except:
         pass
 
@@ -157,9 +149,7 @@ async def cmd_ping(client, message):
     if message.from_user.id not in AUTHORIZED_USERS: return
     uptime = str(datetime.timedelta(seconds=int(time.time() - START_TIME)))
     msg = await message.reply_text(f"⚡ **SYSTEM STATUS**\n━━━━━━━━━━━━\n🕒 Uptime: `{uptime}`\n✅ Status: `Online & Active`\n🛡️ Protection: `Enabled`")
-    await asyncio.sleep(15)
-    await msg.delete()
-    await message.delete()
+    asyncio.create_task(auto_delete_task(message, [msg]))
 
 @app.on_message(filters.command("myid", prefixes=["/", ".", "!"]))
 async def cmd_myid(client, message):
@@ -271,7 +261,7 @@ async def process_lookup(client, message):
             msg = await message.reply_text(final_msg)
             sent_messages.append(msg)
 
-        # Trigger background auto-delete (30s for result, 60s for command)
+        # Trigger silent background auto-delete (30s for result, 60s for command)
         asyncio.create_task(auto_delete_task(message, sent_messages))
 
     except Exception as e:
