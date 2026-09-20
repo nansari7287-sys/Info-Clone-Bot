@@ -6,11 +6,21 @@ import re
 import time
 from datetime import datetime
 from threading import Thread
+
+# ==========================================
+# 🛑 CRITICAL RENDER FIX: EVENT LOOP SETUP
+# WARNING: Ye Pyrogram import hone se PEHLE aana chahiye!
+# ==========================================
+try:
+    loop = asyncio.get_running_loop()
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+# Ab hum safely Pyrogram aur baaki modules import kar sakte hain
+from pyrogram import Client, filters, idle
 from flask import Flask
 from dotenv import load_dotenv
-
-# Pyrogram imports (SESSION ID SYSTEM)
-from pyrogram import Client, filters, idle
 
 # Load Environment Variables
 load_dotenv()
@@ -45,7 +55,7 @@ def home():
     return f"🤖 {SYSTEM_NAME} VIP Engine is Running Seamlessly on Render!"
 
 def run_server():
-    # 🔥 FIX FOR RENDER: Thread ke andar naya event loop set karna zaroori hai
+    # Flask thread ke liye alag event loop set karna zaroori hai
     asyncio.set_event_loop(asyncio.new_event_loop())
     port = int(os.environ.get("PORT", 8080))
     web_app.run(host="0.0.0.0", port=port)
@@ -229,7 +239,7 @@ async def process_lookup(client, message):
             await asyncio.sleep(30)
             try:
                 await sent_message.delete()
-                await message.reply_text(f"🧹 **Data has been auto-deleted after 30 seconds for your privacy.**\n\n⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 : {SYSTEM_NAME}")
+                await message.reply_text(f"🧹 **Data has been auto-deleted after 30 seconds for your privacy.**\n\n⚡ 𝐏𝐨𝐰𝐞𝐫 𝐁𝐲 : {SYSTEM_NAME}")
             except:
                 pass
 
@@ -243,10 +253,10 @@ async def process_lookup(client, message):
 # 🔥 MAIN EXECUTION PROCESS
 # ==========================================
 if __name__ == "__main__":
-    # 1. Start Web Server in a background thread
+    # 1. Start Web Server in a background thread for Render Port Binding
     Thread(target=run_server, daemon=True).start()
     
-    # 2. Start Pyrogram Engine (Handles its own async loop securely)
+    # 2. Start Pyrogram Engine
     print("⏳ Initializing VIP Session Engine...")
     print(f"✅ Bridge Connected to {TARGET_BOT}")
     app.run()
